@@ -20,7 +20,7 @@ export async function exportLessonDOCX(lesson: any) {
 
   const lines: string[] = lesson.content.split("\n");
 
-const contentParagraphs = lines.map(line =>
+const contentParagraphs = lines.map((line: string, _i: number): Paragraph =>
     new Paragraph({
       children: [
         new TextRun({
