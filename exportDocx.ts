@@ -18,9 +18,9 @@ export async function exportLessonDOCX(lesson: any) {
 
   const fileDate = now.toISOString().replace(/[:.]/g, "-");
 
-  const lines = lesson.content.split("\n");
+  const lines: string[] = lesson.content.split("\n");
 
-  const contentParagraphs = lines.map((line: string) =>
+const contentParagraphs = lines.map(line =>
     new Paragraph({
       children: [
         new TextRun({
