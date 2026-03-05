@@ -9,7 +9,14 @@ import {
 
 import { saveAs } from "file-saver";
 
-export async function exportLessonDOCX(lesson: { content: string; subject: string; grade: string; topic: string }) {
+type Lesson = {
+  subject: string;
+  grade: string;
+  topic: string;
+  content: string;
+};
+
+export async function exportLessonDOCX(lesson: Lesson): Promise<void> {
 
   const now = new Date();
 
@@ -20,7 +27,7 @@ export async function exportLessonDOCX(lesson: { content: string; subject: strin
 
   const lines: string[] = lesson.content.split("\n");
 
-const contentParagraphs = lines.map((line: string, _i: number): Paragraph =>
+  const contentParagraphs: Paragraph[] = lines.map((line: string): Paragraph =>
     new Paragraph({
       children: [
         new TextRun({
@@ -33,7 +40,6 @@ const contentParagraphs = lines.map((line: string, _i: number): Paragraph =>
   );
 
   const doc = new Document({
-
     sections: [
       {
         children: [
@@ -60,28 +66,28 @@ const contentParagraphs = lines.map((line: string, _i: number): Paragraph =>
 
           new Paragraph({
             children: [
-              new TextRun({ text: `Materie: `, bold: true }),
+              new TextRun({ text: "Materie: ", bold: true }),
               new TextRun({ text: lesson.subject })
             ]
           }),
 
           new Paragraph({
             children: [
-              new TextRun({ text: `Clasa: `, bold: true }),
+              new TextRun({ text: "Clasa: ", bold: true }),
               new TextRun({ text: lesson.grade })
             ]
           }),
 
           new Paragraph({
             children: [
-              new TextRun({ text: `Tema: `, bold: true }),
+              new TextRun({ text: "Tema: ", bold: true }),
               new TextRun({ text: lesson.topic })
             ]
           }),
 
           new Paragraph({
             children: [
-              new TextRun({ text: `Data generarii: `, bold: true }),
+              new TextRun({ text: "Data generarii: ", bold: true }),
               new TextRun({ text: `${date} ${time}` })
             ],
             spacing: { after: 400 }
@@ -112,7 +118,6 @@ const contentParagraphs = lines.map((line: string, _i: number): Paragraph =>
         ]
       }
     ]
-
   });
 
   const blob = await Packer.toBlob(doc);
@@ -123,5 +128,4 @@ const contentParagraphs = lines.map((line: string, _i: number): Paragraph =>
       .toLowerCase();
 
   saveAs(blob, fileName);
-
 }
