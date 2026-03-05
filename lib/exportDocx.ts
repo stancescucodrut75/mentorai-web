@@ -9,7 +9,14 @@ import {
 
 import { saveAs } from "file-saver";
 
-export async function exportLessonDOCX(lesson: any) {
+type Lesson = {
+  subject: string;
+  grade: string;
+  topic: string;
+  content: string;
+};
+
+export async function exportLessonDOCX(lesson: Lesson): Promise<void> {
 
   const now = new Date();
 
@@ -18,9 +25,9 @@ export async function exportLessonDOCX(lesson: any) {
 
   const fileDate = now.toISOString().replace(/[:.]/g, "-");
 
-  const lines = lesson.content.split("\n");
+  const lines: string[] = lesson.content.split("\n");
 
-  const contentParagraphs = lines.map(line =>
+  const contentParagraphs: Paragraph[] = lines.map((line: string): Paragraph =>
     new Paragraph({
       children: [
         new TextRun({
@@ -33,7 +40,6 @@ export async function exportLessonDOCX(lesson: any) {
   );
 
   const doc = new Document({
-
     sections: [
       {
         children: [
@@ -60,28 +66,28 @@ export async function exportLessonDOCX(lesson: any) {
 
           new Paragraph({
             children: [
-              new TextRun({ text: `Materie: `, bold: true }),
+              new TextRun({ text: "Materie: ", bold: true }),
               new TextRun({ text: lesson.subject })
             ]
           }),
 
           new Paragraph({
             children: [
-              new TextRun({ text: `Clasa: `, bold: true }),
+              new TextRun({ text: "Clasa: ", bold: true }),
               new TextRun({ text: lesson.grade })
             ]
           }),
 
           new Paragraph({
             children: [
-              new TextRun({ text: `Tema: `, bold: true }),
+              new TextRun({ text: "Tema: ", bold: true }),
               new TextRun({ text: lesson.topic })
             ]
           }),
 
           new Paragraph({
             children: [
-              new TextRun({ text: `Data generarii: `, bold: true }),
+              new TextRun({ text: "Data generarii: ", bold: true }),
               new TextRun({ text: `${date} ${time}` })
             ],
             spacing: { after: 400 }
@@ -112,7 +118,6 @@ export async function exportLessonDOCX(lesson: any) {
         ]
       }
     ]
-
   });
 
   const blob = await Packer.toBlob(doc);
