@@ -7,69 +7,81 @@ export default function LessonForm({ setLesson }: any) {
   const [subject, setSubject] = useState("");
   const [grade, setGrade] = useState("");
   const [topic, setTopic] = useState("");
-
   const [loading, setLoading] = useState(false);
 
-async function generateLesson() {
+  async function generateLesson() {
 
-  setLoading(true);
+    if (!subject || !grade || !topic) {
+      alert("Completeaza toate campurile");
+      return;
+    }
 
-  const res = await fetch("/api/generate-lesson", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
+    setLoading(true);
+
+    const res = await fetch("/api/generate-lesson", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        subject,
+        grade,
+        topic
+      })
+    });
+
+    const data = await res.json();
+
+    setLesson({
       subject,
       grade,
-      topic
-    })
-  });
+      topic,
+      content: data.lesson
+    });
 
-  const data = await res.json();
-
-  setLesson({
-    subject,
-    grade,
-    topic,
-    content: data.lesson
-  });
-
-  setLoading(false);
-}
+    setLoading(false);
+  }
 
   return (
 
-    <div className="bg-zinc-900 p-6 rounded-xl mb-6">
+    <div className="relative bg-slate-900/70 backdrop-blur border border-slate-800 rounded-2xl p-8 shadow-xl overflow-hidden">
 
-      <div className="grid gap-4">
+      {/* glow subtle */}
+
+      <div className="absolute w-[400px] h-[400px] bg-blue-500 opacity-10 blur-[120px] -top-20 -right-20"></div>
+
+      <div className="relative z-10 grid gap-5">
+
+        <h2 className="text-xl font-semibold text-white">
+          Generator plan lectie
+        </h2>
 
         <input
-          className="p-2 bg-zinc-800 rounded text-white"
-          placeholder="Materie"
+          className="p-3 bg-slate-800 rounded-lg border border-slate-700 text-white focus:outline-none focus:border-blue-500"
+          placeholder="Materie (ex: Matematica)"
           value={subject}
           onChange={(e) => setSubject(e.target.value)}
         />
 
         <input
-          className="p-2 bg-zinc-800 rounded text-white"
-          placeholder="Clasa"
+          className="p-3 bg-slate-800 rounded-lg border border-slate-700 text-white focus:outline-none focus:border-blue-500"
+          placeholder="Clasa (ex: a VII-a)"
           value={grade}
           onChange={(e) => setGrade(e.target.value)}
         />
 
         <input
-          className="p-2 bg-zinc-800 rounded text-white"
-          placeholder="Tema"
+          className="p-3 bg-slate-800 rounded-lg border border-slate-700 text-white focus:outline-none focus:border-blue-500"
+          placeholder="Tema lectiei"
           value={topic}
           onChange={(e) => setTopic(e.target.value)}
         />
 
         <button
           onClick={generateLesson}
-          className="bg-yellow-500 text-black p-2 rounded"
+          className="bg-blue-600 hover:bg-blue-500 transition text-white font-semibold p-3 rounded-lg shadow-lg"
         >
-          {loading ? "Generez..." : "Genereaza lectie"}
+          {loading ? "Generez lectia..." : "Genereaza lectie"}
         </button>
 
       </div>
