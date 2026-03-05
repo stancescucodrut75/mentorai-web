@@ -9,7 +9,7 @@ import {
 
 import { saveAs } from "file-saver";
 
-export async function exportLessonDOCX(lesson: any) {
+export async function exportLessonDOCX(lesson: { content: string; subject: string; grade: string; topic: string }) {
 
   const now = new Date();
 
@@ -123,4 +123,5 @@ const contentParagraphs = lines.map((line: string, _i: number): Paragraph =>
       .toLowerCase();
 
   saveAs(blob, fileName);
+
 }
