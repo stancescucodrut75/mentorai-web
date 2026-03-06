@@ -14,7 +14,18 @@ type Lesson = {
   grade: string;
   topic: string;
   content: string;
+  type?: string;
 };
+
+function getTitle(type?: string) {
+
+  if (type === "worksheet") return "FISA DE LUCRU";
+  if (type === "test") return "TEST";
+  if (type === "evaluation") return "EVALUARE RAPIDA";
+  if (type === "questions") return "INTREBARI ORALE";
+
+  return "PLAN DE LECTIE";
+}
 
 export async function exportLessonDOCX(lesson: Lesson): Promise<void> {
 
@@ -25,9 +36,9 @@ export async function exportLessonDOCX(lesson: Lesson): Promise<void> {
 
   const fileDate = now.toISOString().replace(/[:.]/g, "-");
 
-  const lines: string[] = lesson.content.split("\n");
+  const lines = lesson.content.split("\n");
 
-  const contentParagraphs: Paragraph[] = lines.map((line: string): Paragraph =>
+  const contentParagraphs = lines.map((line: string) =>
     new Paragraph({
       children: [
         new TextRun({
@@ -38,6 +49,8 @@ export async function exportLessonDOCX(lesson: Lesson): Promise<void> {
       spacing: { after: 200 }
     })
   );
+
+  const title = getTitle(lesson.type);
 
   const doc = new Document({
     sections: [
@@ -57,7 +70,7 @@ export async function exportLessonDOCX(lesson: Lesson): Promise<void> {
           new Paragraph({
             children: [
               new TextRun({
-                text: "Generator inteligent de planuri de lectie",
+                text: "Platforma AI pentru profesori",
                 italics: true
               })
             ],
@@ -94,7 +107,7 @@ export async function exportLessonDOCX(lesson: Lesson): Promise<void> {
           }),
 
           new Paragraph({
-            text: "PLAN DE LECTIE",
+            text: title,
             heading: HeadingLevel.HEADING_1,
             alignment: AlignmentType.CENTER,
             spacing: { after: 400 }
@@ -106,7 +119,7 @@ export async function exportLessonDOCX(lesson: Lesson): Promise<void> {
             children: [
               new TextRun({
                 text:
-                  "Document generat automat cu MentorAI. Utilizarea in afara aplicatiei MentorAI nu este permisa fara acordul platformei.",
+                  "Document generat automat cu MentorAI.",
                 italics: true,
                 size: 18
               })
@@ -123,7 +136,7 @@ export async function exportLessonDOCX(lesson: Lesson): Promise<void> {
   const blob = await Packer.toBlob(doc);
 
   const fileName =
-    `MentorAI-${lesson.subject}-clasa-${lesson.grade}-${lesson.topic}-${fileDate}.docx`
+    `mentorai-${lesson.type || "lesson"}-${lesson.subject}-${lesson.topic}-${fileDate}.docx`
       .replace(/\s+/g, "-")
       .toLowerCase();
 

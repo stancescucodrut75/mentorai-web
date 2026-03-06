@@ -1,7 +1,7 @@
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 
-export async function exportLessonPDF() {
+export async function exportLessonPDF(lesson?: any) {
 
   const element = document.getElementById("lesson-pdf");
   if (!element) return;
@@ -25,6 +25,7 @@ export async function exportLessonPDF() {
   let position = 0;
 
   pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+
   heightLeft -= pageHeight;
 
   while (heightLeft > 0) {
@@ -37,5 +38,10 @@ export async function exportLessonPDF() {
     heightLeft -= pageHeight;
   }
 
-  pdf.save("mentorai-lesson.pdf");
+  const name =
+    lesson
+      ? `mentorai-${lesson.type}-${lesson.subject}-${lesson.topic}.pdf`
+      : "mentorai-document.pdf";
+
+  pdf.save(name.replace(/\s+/g, "-").toLowerCase());
 }

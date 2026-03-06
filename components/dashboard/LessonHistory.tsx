@@ -20,6 +20,7 @@ type LessonItem = {
   grade: string;
   topic: string;
   content: string;
+  type?: string;
   createdAt?: any;
 };
 
@@ -36,20 +37,45 @@ function formatDate(ts: any) {
   }
 }
 
+function getTypeLabel(type?: string) {
+  if (type === "worksheet") return "Fisa de lucru";
+  if (type === "test") return "Test";
+  if (type === "evaluation") return "Evaluare";
+  if (type === "questions") return "Intrebari orale";
+  return "Plan lectie";
+}
+
+function getTypeBadgeClass(type?: string) {
+  if (type === "worksheet") {
+    return "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30";
+  }
+
+  if (type === "test") {
+    return "bg-amber-500/15 text-amber-300 border border-amber-500/30";
+  }
+
+  if (type === "evaluation") {
+    return "bg-fuchsia-500/15 text-fuchsia-300 border border-fuchsia-500/30";
+  }
+
+  if (type === "questions") {
+    return "bg-cyan-500/15 text-cyan-300 border border-cyan-500/30";
+  }
+
+  return "bg-blue-500/15 text-blue-300 border border-blue-500/30";
+}
+
 export default function LessonHistory({
   onSelect,
 }: {
   onSelect?: (lesson: LessonItem) => void;
 }) {
-
   const [items, setItems] = useState<LessonItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(true);
 
   useEffect(() => {
-
     const unsubAuth = onAuthStateChanged(auth, (user) => {
-
       if (!user) {
         setItems([]);
         setLoading(false);
@@ -68,7 +94,6 @@ export default function LessonHistory({
       const unsubSnap = onSnapshot(
         q,
         (snap) => {
-
           const rows: LessonItem[] = snap.docs.map((d) => ({
             id: d.id,
             ...(d.data() as any),
@@ -76,7 +101,6 @@ export default function LessonHistory({
 
           setItems(rows);
           setLoading(false);
-
         },
         (err) => {
           console.error(err);
@@ -85,17 +109,14 @@ export default function LessonHistory({
       );
 
       return () => unsubSnap();
-
     });
 
     return () => unsubAuth();
-
   }, []);
 
   async function handleDelete(item: LessonItem) {
-
     const ok = window.confirm(
-      `Stergi lectia?\n\n${item.subject} • Clasa ${item.grade} • ${item.topic}`
+      `Stergi materialul?\n\n${getTypeLabel(item.type)}\n${item.subject} • Clasa ${item.grade} • ${item.topic}`
     );
 
     if (!ok) return;
@@ -103,71 +124,58 @@ export default function LessonHistory({
     setItems((prev) => prev.filter((x) => x.id !== item.id));
 
     try {
-
       await deleteDoc(doc(db, "lessons", item.id));
-
     } catch {
-
-      alert("Nu am putut sterge lectia.");
-
+      alert("Nu am putut sterge materialul.");
     }
-
   }
 
   return (
-
     <section className="relative bg-slate-900/70 backdrop-blur border border-slate-800 rounded-2xl p-8 shadow-xl overflow-hidden">
-
-      {/* glow subtle */}
-
       <div className="absolute w-[500px] h-[500px] bg-blue-600 opacity-10 blur-[140px] -top-40 -right-40"></div>
 
       <div className="relative z-10">
-
         <button
           type="button"
           onClick={() => setExpanded((v) => !v)}
           className="w-full flex items-center justify-between mb-4"
         >
-
           <div className="text-lg font-semibold text-blue-400">
-            Istoric lectii
+            Istoric materiale
           </div>
 
           <div className="text-blue-400 text-sm">
             {expanded ? "▲" : "▼"}
           </div>
-
         </button>
 
         {!expanded ? null : (
-
           <div className="mt-4">
-
             {loading ? (
-
               <div className="text-slate-400">
                 Incarc istoric...
               </div>
-
             ) : items.length === 0 ? (
-
               <div className="text-slate-400">
-                Nu exista lectii salvate.
+                Nu exista materiale salvate.
               </div>
-
             ) : (
-
               <div className="grid gap-4">
-
                 {items.map((it) => (
-
                   <div
                     key={it.id}
                     className="bg-slate-950 border border-slate-800 rounded-xl p-5 flex items-center justify-between gap-4 transition hover:border-blue-500 hover:shadow-lg"
                   >
-
                     <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2 mb-2">
+                        <span
+                          className={`text-xs px-2.5 py-1 rounded-full font-medium ${getTypeBadgeClass(
+                            it.type
+                          )}`}
+                        >
+                          {getTypeLabel(it.type)}
+                        </span>
+                      </div>
 
                       <div className="text-blue-400 font-semibold truncate">
                         {it.subject} • Clasa {it.grade}
@@ -182,11 +190,9 @@ export default function LessonHistory({
                           {formatDate(it.createdAt)}
                         </div>
                       )}
-
                     </div>
 
                     <div className="flex gap-2 shrink-0">
-
                       <button
                         type="button"
                         onClick={() => onSelect?.(it)}
@@ -202,24 +208,14 @@ export default function LessonHistory({
                       >
                         Sterge
                       </button>
-
                     </div>
-
                   </div>
-
                 ))}
-
               </div>
-
             )}
-
           </div>
-
         )}
-
       </div>
-
     </section>
-
   );
 }

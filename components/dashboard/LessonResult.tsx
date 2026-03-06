@@ -1,110 +1,115 @@
 "use client";
 
 import { useState } from "react";
-import { exportLessonDOCX } from "@/lib/exportDocx";
-import { exportLessonPDF } from "@/lib/exportPdf";
+import { auth } from "@/lib/firebase";
 
-export default function LessonResult({ lesson }: any) {
+export default function LessonResult({ lesson, setLesson }: any) {
 
-  const [open, setOpen] = useState(true);
+  const [loading,setLoading] = useState<string | null>(null);
 
-  if (!lesson) return null;
+  if(!lesson) return null;
 
-  return (
+  async function generate(type:string){
 
-    <div className="relative bg-slate-900/70 backdrop-blur border border-slate-800 rounded-2xl p-8 mb-8 shadow-xl overflow-hidden">
+    try{
 
-      {/* glow subtil */}
+      setLoading(type);
 
-      <div className="absolute w-[500px] h-[500px] bg-blue-600 opacity-10 blur-[120px] -bottom-40 -right-40"></div>
+      const user = auth.currentUser;
 
-      <div className="relative z-10">
+      if(!user){
+        alert("Nu esti autentificat");
+        return;
+      }
 
-        {/* header */}
+      const token = await user.getIdToken();
 
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+      const res = await fetch("/api/generate",{
+        method:"POST",
+        headers:{
+          "Content-Type":"application/json",
+          Authorization:`Bearer ${token}`
+        },
+        body:JSON.stringify({
+          subject:lesson.subject,
+          grade:lesson.grade,
+          topic:lesson.topic,
+          type
+        })
+      });
 
-          <div className="text-blue-400 font-semibold text-lg">
-            {lesson.subject} • Clasa {lesson.grade} • {lesson.topic}
-          </div>
+      const data = await res.json();
 
-          <button
-            onClick={() => setOpen(!open)}
-            className="bg-slate-800 hover:bg-slate-700 px-4 py-2 rounded-lg text-sm transition"
-          >
-            {open ? "Ascunde lectia" : "Arata lectia"}
-          </button>
+      if(!res.ok){
+        alert(data.error || "Eroare generare");
+        return;
+      }
 
-        </div>
+      setLesson({
+        ...lesson,
+        type,
+        content:data.content
+      });
 
-        {open && (
+    }catch(err){
 
-          <>
-            {/* continut AI */}
+      console.error(err);
+      alert("Server error");
 
-            <div className="bg-slate-950 border border-slate-800 rounded-xl p-6 mb-6 max-h-[600px] overflow-y-auto">
+    }finally{
 
-              <div className="text-slate-200 whitespace-pre-wrap leading-relaxed text-[15px]">
-                {lesson.content}
-              </div>
+      setLoading(null);
 
-            </div>
+    }
 
-            {/* export buttons */}
+  }
 
-            <div className="flex flex-wrap gap-3">
+  return(
 
-              <button
-                onClick={() => exportLessonDOCX(lesson)}
-                className="bg-blue-600 hover:bg-blue-500 text-white font-semibold px-5 py-2 rounded-lg shadow-md transition"
-              >
-                Export DOCX
-              </button>
+<div className="mt-8 bg-slate-900 border border-slate-800 rounded-2xl p-8">
 
-              <button
-                onClick={() => exportLessonPDF()}
-                className="bg-slate-800 hover:bg-slate-700 text-white font-semibold px-5 py-2 rounded-lg transition"
-              >
-                Export PDF
-              </button>
+<div className="text-white whitespace-pre-wrap">
+{lesson.content}
+</div>
 
-            </div>
+<div className="mt-6 flex gap-3 flex-wrap">
 
-            {/* container ascuns pentru pdf */}
+<button
+disabled={loading!==null}
+onClick={()=>generate("test")}
+className="bg-blue-600 px-4 py-2 rounded-lg text-white disabled:opacity-50"
+>
+{loading==="test" ? "Se genereaza..." : "Genereaza test"}
+</button>
 
-            <div
-              id="lesson-pdf"
-              style={{
-                position: "absolute",
-                left: "-9999px",
-                top: 0,
-                width: "800px",
-                background: "#ffffff",
-                color: "#000000",
-                padding: "40px",
-                fontFamily: "Arial"
-              }}
-            >
+<button
+disabled={loading!==null}
+onClick={()=>generate("worksheet")}
+className="bg-green-600 px-4 py-2 rounded-lg text-white disabled:opacity-50"
+>
+{loading==="worksheet" ? "Se genereaza..." : "Genereaza fisa de lucru"}
+</button>
 
-              <h1>MentorAI</h1>
+<button
+disabled={loading!==null}
+onClick={()=>generate("evaluation")}
+className="bg-yellow-600 px-4 py-2 rounded-lg text-white disabled:opacity-50"
+>
+{loading==="evaluation" ? "Se genereaza..." : "Genereaza evaluare"}
+</button>
 
-              <p><b>Materie:</b> {lesson.subject}</p>
-              <p><b>Clasa:</b> {lesson.grade}</p>
-              <p><b>Tema:</b> {lesson.topic}</p>
+<button
+disabled={loading!==null}
+onClick={()=>generate("questions")}
+className="bg-pink-600 px-4 py-2 rounded-lg text-white disabled:opacity-50"
+>
+{loading==="questions" ? "Se genereaza..." : "Genereaza intrebari orale"}
+</button>
 
-              <hr />
+</div>
 
-              <pre style={{ whiteSpace: "pre-wrap" }}>
-                {lesson.content}
-              </pre>
+</div>
 
-            </div>
-
-          </>
-        )}
-
-      </div>
-
-    </div>
   );
+
 }

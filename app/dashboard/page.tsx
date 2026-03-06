@@ -5,6 +5,7 @@ import { auth } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { useRouter } from "next/navigation";
 
+import StatsPanel from "@/components/dashboard/StatsPanel";
 import LessonForm from "@/components/dashboard/LessonForm";
 import LessonResult from "@/components/dashboard/LessonResult";
 import LessonHistory from "@/components/dashboard/LessonHistory";
@@ -62,43 +63,54 @@ export default function Dashboard() {
 
         </div>
 
-        {/* GENERATOR CARD */}
+        {/* STATISTICI */}
+
+        <div className="mb-8">
+          <StatsPanel />
+        </div>
+
+        {/* GENERATOR */}
 
         <div className="bg-slate-900/70 backdrop-blur border border-slate-800 rounded-2xl p-6 mb-8 shadow-xl">
 
           <h2 className="text-xl font-semibold mb-4">
-            Genereaza plan de lectie
+            Generator materiale AI
           </h2>
 
           <LessonForm setLesson={setLesson} />
 
         </div>
 
-        {/* RESULT CARD */}
+        {/* REZULTAT */}
 
         {lesson && (
 
           <div className="bg-slate-900/70 backdrop-blur border border-slate-800 rounded-2xl p-6 mb-8 shadow-xl">
 
             <h2 className="text-xl font-semibold mb-4">
-              Plan de lectie generat
+              Material generat
             </h2>
 
-            <LessonResult lesson={lesson} />
+            <LessonResult
+              lesson={lesson}
+              setLesson={setLesson}
+            />
 
           </div>
 
         )}
 
-        {/* HISTORY CARD */}
+        {/* ISTORIC */}
 
         <div className="bg-slate-900/70 backdrop-blur border border-slate-800 rounded-2xl p-6 shadow-xl">
 
           <h2 className="text-xl font-semibold mb-4">
-            Istoric lectii
+            Istoric materiale
           </h2>
 
-          <LessonHistory onSelect={(lesson) => setLesson(lesson)} />
+          <LessonHistory
+            onSelect={(lesson) => setLesson(lesson)}
+          />
 
         </div>
 

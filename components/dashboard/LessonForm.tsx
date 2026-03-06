@@ -1,92 +1,132 @@
 "use client";
 
 import { useState } from "react";
+import { auth } from "@/lib/firebase";
 
 export default function LessonForm({ setLesson }: any) {
 
-  const [subject, setSubject] = useState("");
-  const [grade, setGrade] = useState("");
-  const [topic, setTopic] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [subject,setSubject]=useState("");
+  const [grade,setGrade]=useState("");
+  const [topic,setTopic]=useState("");
+  const [type,setType]=useState("lesson");
+  const [loading,setLoading]=useState(false);
 
-  async function generateLesson() {
+  async function generate(){
 
-    if (!subject || !grade || !topic) {
+    if(!subject || !grade || !topic){
       alert("Completeaza toate campurile");
       return;
     }
 
-    setLoading(true);
+    try{
 
-    const res = await fetch("/api/generate-lesson", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
+      setLoading(true);
+
+      const user = auth.currentUser;
+
+      if(!user){
+        alert("Nu esti autentificat");
+        return;
+      }
+
+      const token = await user.getIdToken();
+
+      const res = await fetch("/api/generate",{
+        method:"POST",
+        headers:{
+          "Content-Type":"application/json",
+          Authorization:`Bearer ${token}`
+        },
+        body:JSON.stringify({
+          subject,
+          grade,
+          topic,
+          type
+        })
+      });
+
+      const data = await res.json();
+
+      if(!res.ok){
+        alert(data.error || "Eroare generare");
+        return;
+      }
+
+      setLesson({
         subject,
         grade,
-        topic
-      })
-    });
+        topic,
+        type,
+        content:data.content
+      });
 
-    const data = await res.json();
+    }catch(err){
 
-    setLesson({
-      subject,
-      grade,
-      topic,
-      content: data.lesson
-    });
+      console.error(err);
+      alert("Eroare server");
 
-    setLoading(false);
+    }finally{
+
+      setLoading(false);
+
+    }
+
   }
 
-  return (
+  return(
 
-    <div className="relative bg-slate-900/70 backdrop-blur border border-slate-800 rounded-2xl p-8 shadow-xl overflow-hidden">
+    <div className="grid gap-4">
 
-      {/* glow subtle */}
+      {loading && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/70 z-50">
+          <div className="text-white text-lg">
+            MentorAI genereaza materialul...
+          </div>
+        </div>
+      )}
 
-      <div className="absolute w-[400px] h-[400px] bg-blue-500 opacity-10 blur-[120px] -top-20 -right-20"></div>
+      <select
+        value={type}
+        onChange={(e)=>setType(e.target.value)}
+        className="p-3 bg-slate-800 border border-slate-700 rounded-lg text-white"
+      >
+        <option value="lesson">Plan lectie</option>
+        <option value="worksheet">Fisa de lucru</option>
+        <option value="test">Test</option>
+        <option value="evaluation">Evaluare</option>
+        <option value="questions">Intrebari orale</option>
+      </select>
 
-      <div className="relative z-10 grid gap-5">
+      <input
+        value={subject}
+        onChange={(e)=>setSubject(e.target.value)}
+        placeholder="Materie"
+        className="p-3 bg-slate-800 border border-slate-700 rounded-lg text-white"
+      />
 
-        <h2 className="text-xl font-semibold text-white">
-          Generator plan lectie
-        </h2>
+      <input
+        value={grade}
+        onChange={(e)=>setGrade(e.target.value)}
+        placeholder="Clasa"
+        className="p-3 bg-slate-800 border border-slate-700 rounded-lg text-white"
+      />
 
-        <input
-          className="p-3 bg-slate-800 rounded-lg border border-slate-700 text-white focus:outline-none focus:border-blue-500"
-          placeholder="Materie (ex: Matematica)"
-          value={subject}
-          onChange={(e) => setSubject(e.target.value)}
-        />
+      <input
+        value={topic}
+        onChange={(e)=>setTopic(e.target.value)}
+        placeholder="Tema"
+        className="p-3 bg-slate-800 border border-slate-700 rounded-lg text-white"
+      />
 
-        <input
-          className="p-3 bg-slate-800 rounded-lg border border-slate-700 text-white focus:outline-none focus:border-blue-500"
-          placeholder="Clasa (ex: a VII-a)"
-          value={grade}
-          onChange={(e) => setGrade(e.target.value)}
-        />
-
-        <input
-          className="p-3 bg-slate-800 rounded-lg border border-slate-700 text-white focus:outline-none focus:border-blue-500"
-          placeholder="Tema lectiei"
-          value={topic}
-          onChange={(e) => setTopic(e.target.value)}
-        />
-
-        <button
-          onClick={generateLesson}
-          className="bg-blue-600 hover:bg-blue-500 transition text-white font-semibold p-3 rounded-lg shadow-lg"
-        >
-          {loading ? "Generez lectia..." : "Genereaza lectie"}
-        </button>
-
-      </div>
+      <button
+        onClick={generate}
+        className="bg-blue-600 hover:bg-blue-500 text-white p-3 rounded-lg font-semibold"
+      >
+        Genereaza material
+      </button>
 
     </div>
 
   );
+
 }
