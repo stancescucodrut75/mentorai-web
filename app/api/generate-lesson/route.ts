@@ -23,16 +23,10 @@ const PLAN_LIMITS: Record<string, number> = {
   pro: 500,
 };
 
-function monthKey(d: Date) {
-  const y = d.getUTCFullYear();
-  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
-  return `${y}-${m}`;
-}
-
 export async function POST(req: Request) {
   try {
 
-    /* ---------------- AUTH ---------------- */
+    /* AUTH */
 
     const authHeader = req.headers.get("authorization") || "";
     const match = authHeader.match(/^Bearer\s+(.+)$/i);
@@ -48,136 +42,104 @@ export async function POST(req: Request) {
     const decoded = await adminAuth.verifyIdToken(idToken);
     const userId = decoded.uid;
 
-    /* ---------------- INPUT ---------------- */
+    /* INPUT */
 
     const body = await req.json();
-
-    const { subject, grade, topic } = body as {
-      subject?: string;
-      grade?: string;
-      topic?: string;
-    };
+    const { subject, grade, topic } = body;
 
     if (!subject || !grade || !topic) {
       return NextResponse.json(
-        { error: "Date incomplete. Completeaza materie, clasa, tema." },
+        { error: "Date incomplete." },
         { status: 400 }
       );
     }
 
-    /* ---------------- PLAN CHECK ---------------- */
+    /* PLAN CHECK */
 
     const userRef = db.collection("users").doc(userId);
 
-    const now = new Date();
-    const nowMonth = monthKey(now);
-
-    const quotaResult = await db.runTransaction(async (tx) => {
+    const quota = await db.runTransaction(async (tx) => {
 
       const snap = await tx.get(userRef);
 
       if (!snap.exists) {
-
-        tx.set(
-          userRef,
-          {
-            uid: userId,
-            plan: "free",
-            monthKey: nowMonth,
-            lessonsUsedThisMonth: 0,
-            freeUsed: 0,
-            extraCredits: 0,
-            createdAt: FieldValue.serverTimestamp(),
-            updatedAt: FieldValue.serverTimestamp(),
-          },
-          { merge: true }
-        );
+        tx.set(userRef,{
+          uid:userId,
+          plan:"free",
+          freeUsed:0,
+          extraCredits:0,
+          createdAt:FieldValue.serverTimestamp()
+        },{merge:true});
       }
 
       const data = (snap.exists ? snap.data() : {}) as any;
 
-      const plan: string = data?.plan || "free";
-      const planLimit = PLAN_LIMITS[plan] ?? PLAN_LIMITS.free;
+      const plan = data?.plan || "free";
+      const limit = PLAN_LIMITS[plan];
 
-      let lessonsUsedThisMonth: number = Number(data?.lessonsUsedThisMonth || 0);
-      let freeUsed: number = Number(data?.freeUsed || 0);
-      let extraCredits: number = Number(data?.extraCredits || 0);
+      const freeUsed = Number(data?.freeUsed || 0);
+      const extraCredits = Number(data?.extraCredits || 0);
 
       if (plan === "free") {
 
-        if (freeUsed < planLimit) {
+        if (freeUsed < limit) {
 
           tx.set(userRef,{
-            freeUsed: freeUsed + 1,
-            updatedAt: FieldValue.serverTimestamp()
-          },{ merge:true });
+            freeUsed:freeUsed+1,
+            updatedAt:FieldValue.serverTimestamp()
+          },{merge:true});
 
-          return { allowed:true };
-
+          return {allowed:true};
         }
 
-        if (extraCredits > 0) {
+        if (extraCredits>0){
 
           tx.set(userRef,{
-            extraCredits: extraCredits - 1,
-            updatedAt: FieldValue.serverTimestamp()
-          },{ merge:true });
+            extraCredits:extraCredits-1,
+            updatedAt:FieldValue.serverTimestamp()
+          },{merge:true});
 
-          return { allowed:true };
+          return {allowed:true};
         }
 
-        return { allowed:false };
+        return {allowed:false};
       }
 
-      if (lessonsUsedThisMonth < planLimit) {
-
-        tx.set(userRef,{
-          lessonsUsedThisMonth: lessonsUsedThisMonth + 1,
-          updatedAt: FieldValue.serverTimestamp()
-        },{ merge:true });
-
-        return { allowed:true };
-      }
-
-      if (extraCredits > 0) {
-
-        tx.set(userRef,{
-          extraCredits: extraCredits - 1,
-          updatedAt: FieldValue.serverTimestamp()
-        },{ merge:true });
-
-        return { allowed:true };
-      }
-
-      return { allowed:false };
+      return {allowed:true};
 
     });
 
-    if (!quotaResult.allowed) {
-
+    if (!quota.allowed) {
       return NextResponse.json(
         { error: "Ai atins limita planului." },
         { status: 403 }
       );
-
     }
 
-    /* ---------------- GENERATE LESSON ---------------- */
+    /* PROMPT OPTIMIZAT */
 
     const prompt = `
-Creeaza un plan de lectie pentru:
+Esti un profesor experimentat.
+
+Genereaza un plan de lectie clar si structurat pentru:
 
 Materie: ${subject}
 Clasa: ${grade}
 Tema: ${topic}
 
 Structura:
-- obiective
-- introducere
-- activitate principala
-- exercitii
-- evaluare
+
+1. Obiective de invatare (3-5)
+2. Introducere in lectie (5 minute)
+3. Activitate principala
+4. Exercitii pentru elevi
+5. Evaluare rapida
+6. Tema pentru acasa (optional)
+
+Scrie concis si structurat pentru profesori.
 `;
+
+    /* OPENAI */
 
     const aiResponse = await fetch(
       "https://api.openai.com/v1/chat/completions",
@@ -185,24 +147,27 @@ Structura:
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+          Authorization:`Bearer ${process.env.OPENAI_API_KEY}`
         },
         body: JSON.stringify({
-          model: "gpt-4o-mini",
-          messages: [{ role: "user", content: prompt }],
-          max_tokens: 1500,
-          temperature: 0.7,
-        }),
+          model:"gpt-4o-mini",
+          messages:[
+            {role:"user",content:prompt}
+          ],
+          max_tokens:900,
+          temperature:0.6
+        })
       }
     );
 
     if (!aiResponse.ok) {
 
-      console.error("OpenAI error:", await aiResponse.text());
+      const err = await aiResponse.text();
+      console.error("OpenAI error:",err);
 
       return NextResponse.json(
-        { error: "Eroare AI." },
-        { status: 500 }
+        {error:"Eroare generare AI"},
+        {status:500}
       );
     }
 
@@ -212,12 +177,12 @@ Structura:
 
     if (!content) {
       return NextResponse.json(
-        { error: "Eroare la generare." },
-        { status: 500 }
+        {error:"AI nu a returnat continut"},
+        {status:500}
       );
     }
 
-    /* ---------------- SAVE LESSON ---------------- */
+    /* SALVARE LECTIE */
 
     await db.collection("lessons").add({
       userId,
@@ -225,20 +190,20 @@ Structura:
       grade,
       topic,
       content,
-      createdAt: FieldValue.serverTimestamp(),
+      createdAt:FieldValue.serverTimestamp()
     });
 
-    /* ---------------- RESPONSE ---------------- */
+    /* RESPONSE */
 
-    return NextResponse.json({ lesson: content });
+    return NextResponse.json({lesson:content});
 
-  } catch (err) {
+  } catch(err){
 
-    console.error("API ERROR:", err);
+    console.error("API ERROR:",err);
 
     return NextResponse.json(
-      { error: "Eroare server." },
-      { status: 500 }
+      {error:"Eroare server"},
+      {status:500}
     );
   }
 }
